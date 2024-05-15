@@ -2,15 +2,76 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include <strings.h>
 
-typedef struct node
+typedef struct Node
 {
     char *data;
-    struct node *left, *right;
-} node;
+    struct Node *left, *right;
+} Node;
 
-node *findMin(node *root)
+Node *newNode(char *data);
+Node *insertNode(Node *node, char *data);
+Node *findMin(Node *root);
+Node *findMax(Node *root);
+Node *search(Node *root, char *key);
+Node *getpredecessor(Node *root, Node *current);
+Node *getsuccessor(Node *root, Node *current);
+Node *load();
+int findHeight(Node *root);
+
+Node *newNode(char *data)
+{
+    Node *n = malloc(sizeof(Node));
+    n->data = malloc(strlen(data) + 1);
+    strcpy(n->data, data);
+    n->left = n->right = NULL;
+    return n;
+}
+
+Node *insertNode(Node *node, char *data)
+{
+    if (!node)
+        return newNode(data);
+
+    if (strcasecmp(data, node->data) < 0)
+        node->left = insertNode(node->left, data);
+    else if (strcasecmp(data, node->data) > 0)
+        node->right = insertNode(node->right, data);
+    return node;
+}
+
+Node *load()
+{
+    printf("\nLoading dictionary...\n");
+    FILE *fp;
+    fp = fopen("Dictionary.txt", "r");
+    if (fp == NULL)
+    {
+        printf("Error: Dictionary.txt file not found\nQuitting the program.\n");
+        fclose(fp);
+        exit(2);
+    }
+    char record[50];
+    rewind(fp);
+    int num_word = 0;
+    Node *root = NULL;
+    while (fgets(record, sizeof(record), fp))
+    {
+        if (record[0] == '\n')
+            continue; // skip empty line
+        num_word++;
+        record[strlen(record) - 1] = '\0'; // remove \n
+        // printf("Record: \"%s\"", record);
+        root = insertNode(root, record);
+    }
+    printf("Number of words: %d\n", num_word);
+    printf("Height: %d\n", findHeight(root));
+    rewind(fp);
+    fclose(fp);
+    return root;
+}
+
+Node *findMin(Node *root)
 {
     if (root == NULL)
         return root;
@@ -20,7 +81,7 @@ node *findMin(node *root)
         return findMin(root->left);
 }
 
-node *findMax(node *root)
+Node *findMax(Node *root)
 {
     if (root == NULL)
         return root;
@@ -30,29 +91,40 @@ node *findMax(node *root)
         return findMax(root->right);
 }
 
-node *search(node *root, char *x)
+int findHeight(Node *root)
+{
+    if(root == NULL)
+        return 0;
+    return 1 + fmax(findHeight(root->left),findHeight(root->right));
+}
+
+Node *search(Node *root, char *key)
 {
     if (root == NULL)
         return NULL;
-    else if (!strcasecmp(x, root->data))
+    else if (!strcasecmp(key, root->data))
         return root;
-    else if (strcasecmp(x, root->data) < 0)
-        return search(root->left, x);
+    else if (strcasecmp(key, root->data) < 0)
+        if (root->left)
+            return search(root->left, key);
+        else
+            return root;
+    else if (root->right)
+        return search(root->right, key);
     else
-        return search(root->right, x);
+        return root;
 }
 
-node *getpredecessor(node *root, char *data)
+Node *getpredecessor(Node *root, Node *current)
 {
-    node *current = search(root, data);
     if (current == NULL)
         return NULL;
     if (current->left != NULL)
         return findMax(current->left);
     else
     {
-        node *predecessor = NULL;
-        node *ancestor = root;
+        Node *predecessor = NULL;
+        Node *ancestor = root;
         while (ancestor != current)
         {
             if (strcasecmp(current->data, ancestor->data) > 0)
@@ -63,20 +135,20 @@ node *getpredecessor(node *root, char *data)
             else
                 ancestor = ancestor->left;
         }
+        return predecessor;
     }
 }
 
-node *getsuccessor(node *root, char *data)
+Node *getsuccessor(Node *root, Node *current)
 {
-    node *current = search(root, data);
     if (current == NULL)
         return NULL;
     if (current->right != NULL)
         return findMin(current->right);
     else
     {
-        node *successor = NULL;
-        node *ancestor = root;
+        Node *successor = NULL;
+        Node *ancestor = root;
         while (ancestor != current)
         {
             if (strcasecmp(current->data, ancestor->data) < 0)
@@ -93,5 +165,26 @@ node *getsuccessor(node *root, char *data)
 
 void main()
 {
-    printf("hello world!");
+    Node *root = load();
+    char *sentence = malloc(80);
+    printf("Enter a sentence: ");
+    fgets(sentence, 80, stdin);
+    sentence[strlen(sentence) - 1] = '\0';
+    char *token = strtok(sentence, " ");
+    while (token)
+    {
+        // printf("\n");
+        // printf("token: \"%s\"\n", token);
+        Node *temp = search(root, token);
+        // printf("\"%s\"\n", temp->data);
+        if (!strcasecmp(token, temp->data))
+            printf("%s - CORRECT\n", token);
+        else
+        {
+            Node *successor = getsuccessor(root, temp);
+            Node *predecessor = getpredecessor(root, temp);
+            printf("%s - Incorrect, Suggestions: %s %s %s\n", token, predecessor->data, successor->data);
+        }
+        token = strtok(NULL, " ");
+    }
 }
