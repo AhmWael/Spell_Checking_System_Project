@@ -94,7 +94,7 @@ Node *findMax(Node *root)
 int findHeight(Node *root)
 {
     if(root == NULL)
-        return 0;
+        return -1;
     return 1 + fmax(findHeight(root->left),findHeight(root->right));
 }
 
@@ -167,7 +167,7 @@ void main()
 {
     Node *root = load();
     char *sentence = malloc(80);
-    printf("Enter a sentence: ");
+    printf("\nEnter a sentence: ");
     fgets(sentence, 80, stdin);
     sentence[strlen(sentence) - 1] = '\0';
     char *token = strtok(sentence, " ");
@@ -183,7 +183,7 @@ void main()
         {
             Node *successor = getsuccessor(root, temp);
             Node *predecessor = getpredecessor(root, temp);
-            printf("%s - Incorrect, Suggestions: %s %s %s\n", token, predecessor->data, successor->data);
+            printf("%s - Incorrect, Suggestions: %s %s %s\n", token, temp->data, successor ? successor->data : "", predecessor ? predecessor->data : "");
         }
         token = strtok(NULL, " ");
     }
